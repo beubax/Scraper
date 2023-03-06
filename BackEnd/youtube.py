@@ -1,5 +1,5 @@
-import os, glob
-from scenedetect import SceneManager, detect, ContentDetector, open_video, split_video_ffmpeg
+import os
+from scenedetect import SceneManager, detect, ContentDetector, open_video
 from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 import shutil
 from selenium import webdriver
@@ -8,58 +8,78 @@ import time
 import multiprocessing
 
 def search(search_term):
-    manager = multiprocessing.Manager()
-    paths = manager.dict()
+    manager = multiprocessing.Manager() #Process manager
+    paths = manager.dict() #Shared dictionary among all the processes
     jobs = []
-    dirpath = "videos/youtube"
-    if os.path.exists(dirpath) and os.path.isdir(dirpath):
+
+    #Delete any previous contents existing in folder
+    dirpath = "videos/youtube" 
+    if os.path.exists(dirpath) and os.path.isdir(dirpath): 
         shutil.rmtree(dirpath)
     os.mkdir(dirpath)
 
+    #Function to scrape youtube webpage and return links
     links = scrapeYoutube(search_term)
+    print(links)
+    
     i = 0
-
     for link in links:
-        if link is None:
+        if link is None: #Some links do not scrape properly
             continue
         i = i + 1
-        p = multiprocessing.Process(target=downloadSplit, args=(link, 'video' + str(i), dirpath, paths))
-        jobs.append(p)
-        p.start()
-        if(i == 10):
+        p = multiprocessing.Process(target=downloadSplit, args=(link, 'video' + str(i), dirpath, paths)) #Declare a new process which downloads and splits the video
+        jobs.append(p) #Append to job list
+        p.start() #Start the process
+
+        if(i == 10): #Downloads 10 videos
             break
     
-    for proc in jobs:
+    #Waits for processes to finish their task and then joins with main process
+    for proc in jobs: 
         proc.join()
 
     return paths
 
+#Function to download and split the video
 def downloadSplit(link, name, dirpath, paths):
-    path = os.path.join(dirpath, name)
+    #Create a separate folder for each video
+    path = os.path.join(dirpath, name) 
     os.mkdir(path)
+
+    #Run command in terminal
     command = 'yt-dlp -f mp4 -o "' + name + '.mp4" ' + link
     os.system(command)
+
+    #Opens video and detects list of scene changes
     video = open_video(name + '.mp4')
     scene_manager = SceneManager()
     scene_manager.auto_downscale = True
     scene_manager.add_detector(ContentDetector())
     scene_manager.detect_scenes(video)
     scene_list = scene_manager.get_scene_list()
-    routes = []
+
+    routes = [] #List to store video routes
+
+    #If video contains just one scene, entire video is copied to the destination folder
     if len(scene_list) == 0:
         shutil.copy(name + '.mp4', dirpath + '/' + name + '/1.mp4')
-        routes.append("http://127.0.0.1:8000/stream/" + dirpath + "/" + name + "/1.mp4")
+        routes.append("http://127.0.0.1:8000/stream/" + dirpath + "/" + name + "/1.mp4") #Route to access the video
     else:
         for time in scene_list:
-            starttime = int(int(time[0])/29.97)
+            #Frame/FPS = Time
+            starttime = int(int(time[0])/29.97) 
             endtime = int(int(time[1])/29.97)
-            if(endtime - starttime) < 5:
+            if(endtime - starttime) < 5: #Does not include video clips shorter than 5 seconds in duration
                 continue
-            ffmpeg_extract_subclip(name + '.mp4', starttime, endtime, targetname = dirpath + "/" + name + "/" +str(scene_list.index(time)+1)+".mp4")
-            routes.append("http://127.0.0.1:8000/stream/" + dirpath + "/" + name + "/" + str(scene_list.index(time)+1)+".mp4")
-    os.remove(name + '.mp4')
-    paths[name] = routes
 
+            #Extract subclips from original video
+            ffmpeg_extract_subclip(name + '.mp4', starttime, endtime, targetname = dirpath + "/" + name + "/" +str(scene_list.index(time)+1)+".mp4")
+            routes.append("http://127.0.0.1:8000/stream/" + dirpath + "/" + name + "/" + str(scene_list.index(time)+1)+".mp4") #Route to access the video
+
+    os.remove(name + '.mp4')
+    paths[name] = routes #Add routes list to dictionary shared among all processes
+
+#Function to scrape video URLs
 def scrapeYoutube(search):
     driver_location = "/usr/bin/chromedriver"
     binary_location = "/usr/bin/google-chrome"
@@ -67,10 +87,10 @@ def scrapeYoutube(search):
     options = webdriver.ChromeOptions()
     options.binary_location = binary_location
 
-    driver = webdriver.Chrome(driver_location, options=options)
-    query = "https://www.youtube.com/results?search_query=" + search
+    driver = webdriver.Chrome(driver_location, options=options) #Initializing selenium chromedriver
+    query = "https://www.youtube.com/results?search_query=" + search #Fetches page with provided search term
     driver.get(query)
-    SCROLL_PAUSE_TIME = 3
+    SCROLL_PAUSE_TIME = 10
 
     # Get scroll height
     last_height = driver.execute_script("return document.body.scrollHeight")
@@ -88,12 +108,14 @@ def scrapeYoutube(search):
             break
         last_height = new_height
 
+    #XPATH of video url
     user_data = driver.find_elements(By.XPATH, '//*[@id="video-title"]')
+    
     links = []
     for i in user_data:
-        links.append(i.get_attribute('href'))
-    print(links)
-    driver.quit()
+        links.append(i.get_attribute('href')) #Add .href attribute of tags to links list
+
+    driver.quit() #Close the chrome webdriver
     return links
 
 
