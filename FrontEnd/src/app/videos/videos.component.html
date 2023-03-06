@@ -1,0 +1,14 @@
+ <!--Toolbar with three buttons to redirect to videos downloaded from respective platforms--> 
+<mat-toolbar color="primary">
+    <mat-toolbar-row>
+<button [routerLink]="'/home'"><mat-icon class="material-icons">home</mat-icon></button>
+<mat-button-toggle-group name="fontStyle" aria-label="Font Style">
+    <mat-button-toggle [routerLink]="'youtube'">Youtube</mat-button-toggle>
+    <mat-button-toggle [routerLink]="'tiktok'">Tiktok</mat-button-toggle>
+    <mat-button-toggle [routerLink]="'instagram'">Instagram</mat-button-toggle>
+  </mat-button-toggle-group>
+</mat-toolbar-row>
+</mat-toolbar>
+
+ <!--Outlet to showcase videos--> 
+<router-outlet></router-outlet>

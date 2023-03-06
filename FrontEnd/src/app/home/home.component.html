@@ -1,0 +1,39 @@
+  <!--Title of webpage--> 
+  <mat-card class="title_center">
+    <mat-card-content>Web Scraping Tool</mat-card-content>
+  </mat-card>  
+
+   <!--Search video functionality--> 
+<body>
+  <div class="search-box">
+    <button (click)="searchSubmit()" class="btn-search"><i class="material-icons">search</i></button>
+    <input [(ngModel)]="value" [ngModelOptions]="{standalone: true}" type="text" class="input-search" placeholder="Type to Search...">
+  </div>
+</body>
+
+ <!--Progress bar to showcase video loading--> 
+<mat-progress-bar *ngIf="!flag_progress" mode="determinate" value="0"></mat-progress-bar>
+<mat-progress-bar *ngIf="flag_progress" mode="indeterminate"></mat-progress-bar>
+
+ <!--Button displays once videos are done loading--> 
+<div class="custom">
+  <button (click)="viewVideos()" mat-button class="mat-primary" *ngIf="flag_button">
+    <mat-icon class="material-icons">keyboard_double_arrow_right</mat-icon>
+    Your videos are ready!   
+  </button>
+  </div>  
+
+   <!--Prints logos of supported platforms--> 
+  <div id="banner">
+    <div class="inline-block">
+        <img class="first" src ="/assets/tiktok.png">
+    </div>
+
+    <div class="inline-block">
+        <img class="second" src ="/assets/youtube.png">
+    </div>
+
+    <div class="inline-block">
+        <img class="third" src ="/assets/instagram.png">
+    </div>
+</div>
